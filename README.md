@@ -11,7 +11,7 @@ Interactive 3D visualizations of fundamental linear algebra concepts using Three
 
 ## Live Demo
 
-Visit [https://hardikkamboj.github.io/visualizing_linear_algebra/](https://hardikkamboj.github.io/visualizing_linear_algebra/)
+Visit [https://hardikkamboj.github.io/Visualizing_linear_algebra/](https://hardikkamboj.github.io/Visualizing_linear_algebra/)
 
 ## About
 
