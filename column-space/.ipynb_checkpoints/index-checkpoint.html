@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Column Space & Left Null Space Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            overflow: hidden;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #sidebar {
+            width: 320px;
+            background: #16213e;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid #0f3460;
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #e94560;
+        }
+
+        h2 {
+            font-size: 1rem;
+            margin: 15px 0 10px;
+            color: #0f9b8e;
+        }
+
+        .matrix-input {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .matrix-input input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            background: #1a1a2e;
+            color: #eee;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .matrix-input input:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 4px;
+            background: #e94560;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #ff6b6b;
+        }
+
+        .info-section {
+            background: #1a1a2e;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .vector-info {
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin: 5px 0;
+        }
+
+        .col-space-color {
+            color: #00ff88;
+        }
+
+        .left-null-color {
+            color: #ff6b6b;
+        }
+
+        .legend {
+            margin-top: 20px;
+            padding: 10px;
+            background: #1a1a2e;
+            border-radius: 4px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #info-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="sidebar">
+            <h1>Column Space & Left Null Space</h1>
+
+            <h2>3x3 Matrix Input</h2>
+            <div class="matrix-input" id="matrix-input">
+                <input type="number" value="1" id="m00">
+                <input type="number" value="2" id="m01">
+                <input type="number" value="3" id="m02">
+                <input type="number" value="4" id="m03">
+                <input type="number" value="5" id="m04">
+                <input type="number" value="9" id="m05">
+                <input type="number" value="7" id="m06">
+                <input type="number" value="8" id="m07">
+                <input type="number" value="15" id="m08">
+            </div>
+
+            <button id="visualize-btn">Visualize Spaces</button>
+            <button id="random-rank1-btn">Random Rank-1 Matrix</button>
+            <button id="random-rank2-btn">Random Rank-2 Matrix</button>
+
+            <div class="info-section">
+                <h2>Matrix Rank: <span id="rank-display">-</span></h2>
+            </div>
+
+            <div class="info-section">
+                <h2 class="col-space-color">Column Space Basis</h2>
+                <div id="col-space-vectors"></div>
+            </div>
+
+            <div class="info-section">
+                <h2 class="left-null-color">Left Null Space Basis</h2>
+                <div id="left-null-vectors"></div>
+            </div>
+
+            <div class="legend">
+                <h2>Legend</h2>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #00ff88;"></div>
+                    <span>Column Space Vectors</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff6b6b;"></div>
+                    <span>Left Null Space Vectors</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(0, 255, 136, 0.3);"></div>
+                    <span>Column Space (plane/line)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgba(255, 107, 107, 0.3);"></div>
+                    <span>Left Null Space (plane/line)</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+            <div id="info-overlay">
+                Drag to rotate | Scroll to zoom | Right-drag to pan
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            container.clientWidth / container.clientHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(5, 5, 5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // Orbit controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.zoomSpeed = 3;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 5);
+        scene.add(directionalLight);
+
+        // CSS2D Renderer for labels
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(container.clientWidth, container.clientHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        container.appendChild(labelRenderer.domElement);
+
+        // Grid and axes
+        const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x333333);
+        scene.add(gridHelper);
+
+        // Create dark black axes with labels
+        function createAxis(start, end, label) {
+            const points = [
+                new THREE.Vector3(start.x, start.y, start.z),
+                new THREE.Vector3(end.x, end.y, end.z)
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 3 });
+            const line = new THREE.Line(geometry, material);
+
+            // Create label
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'axis-label';
+            labelDiv.textContent = label;
+            labelDiv.style.color = '#ffffff';
+            labelDiv.style.fontSize = '14px';
+            labelDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            labelDiv.style.fontWeight = '600';
+            labelDiv.style.padding = '2px 6px';
+            labelDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+            labelDiv.style.borderRadius = '3px';
+            labelDiv.style.letterSpacing = '0.5px';
+            const labelObject = new CSS2DObject(labelDiv);
+            labelObject.position.set(end.x * 1.1, end.y * 1.1, end.z * 1.1);
+            line.add(labelObject);
+
+            return line;
+        }
+
+        const axisLength = 5;
+        const xAxis = createAxis({x: -axisLength, y: 0, z: 0}, {x: axisLength, y: 0, z: 0}, 'X');
+        const yAxis = createAxis({x: 0, y: -axisLength, z: 0}, {x: 0, y: axisLength, z: 0}, 'Y');
+        const zAxis = createAxis({x: 0, y: 0, z: -axisLength}, {x: 0, y: 0, z: axisLength}, 'Z');
+        scene.add(xAxis);
+        scene.add(yAxis);
+        scene.add(zAxis);
+
+        // Group for visualization objects
+        let vizGroup = new THREE.Group();
+        scene.add(vizGroup);
+
+        // Create arrow helper
+        function createArrow(direction, color, length = null) {
+            const dir = new THREE.Vector3(direction[0], direction[1], direction[2]);
+            const len = length || dir.length();
+            dir.normalize();
+            const origin = new THREE.Vector3(0, 0, 0);
+            const arrow = new THREE.ArrowHelper(dir, origin, len, color, 0.15, 0.08);
+            return arrow;
+        }
+
+        // Create plane from two vectors
+        function createPlane(v1, v2, color, opacity = 0.3) {
+            const geometry = new THREE.BufferGeometry();
+            const size = 5;
+
+            // Create plane vertices
+            const vertices = new Float32Array([
+                -size * (v1[0] + v2[0]), -size * (v1[1] + v2[1]), -size * (v1[2] + v2[2]),
+                size * (v1[0] - v2[0]), size * (v1[1] - v2[1]), size * (v1[2] - v2[2]),
+                size * (v1[0] + v2[0]), size * (v1[1] + v2[1]), size * (v1[2] + v2[2]),
+                -size * (v1[0] - v2[0]), -size * (v1[1] - v2[1]), -size * (v1[2] - v2[2]),
+            ]);
+
+            const indices = [0, 1, 2, 0, 2, 3];
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: opacity,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+
+            return new THREE.Mesh(geometry, material);
+        }
+
+        // Create line from vector (for 1D spaces)
+        function createLine(direction, color, length = 10) {
+            const dir = new THREE.Vector3(direction[0], direction[1], direction[2]).normalize();
+            const points = [
+                new THREE.Vector3(-dir.x * length, -dir.y * length, -dir.z * length),
+                new THREE.Vector3(dir.x * length, dir.y * length, dir.z * length)
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
+            return new THREE.Line(geometry, material);
+        }
+
+        // Matrix operations
+        function getMatrix() {
+            const matrix = [];
+            for (let i = 0; i < 9; i++) {
+                matrix.push(parseFloat(document.getElementById(`m0${i}`).value) || 0);
+            }
+            return [
+                [matrix[0], matrix[1], matrix[2]],
+                [matrix[3], matrix[4], matrix[5]],
+                [matrix[6], matrix[7], matrix[8]]
+            ];
+        }
+
+        function setMatrix(matrix) {
+            let idx = 0;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    document.getElementById(`m0${idx}`).value = matrix[i][j];
+                    idx++;
+                }
+            }
+        }
+
+        function rowEchelonWithPivots(A, tol = 1e-10) {
+            const rows = A.length;
+            const cols = A[0].length;
+            const pivotCols = [];
+            let currentRow = 0;
+
+            // Deep copy
+            A = A.map(row => [...row]);
+
+            for (let col = 0; col < cols; col++) {
+                if (currentRow >= rows) break;
+
+                // Find pivot
+                let maxRow = currentRow;
+                for (let row = currentRow + 1; row < rows; row++) {
+                    if (Math.abs(A[row][col]) > Math.abs(A[maxRow][col])) {
+                        maxRow = row;
+                    }
+                }
+
+                if (Math.abs(A[maxRow][col]) < tol) continue;
+
+                // Swap rows
+                [A[currentRow], A[maxRow]] = [A[maxRow], A[currentRow]];
+                pivotCols.push(col);
+
+                // Eliminate below
+                for (let row = currentRow + 1; row < rows; row++) {
+                    if (Math.abs(A[row][col]) > tol) {
+                        const factor = A[row][col] / A[currentRow][col];
+                        for (let c = col; c < cols; c++) {
+                            A[row][c] -= factor * A[currentRow][c];
+                        }
+                    }
+                }
+
+                currentRow++;
+            }
+
+            return { rref: A, pivotCols };
+        }
+
+        function getNullSpace(A, tol = 1e-10) {
+            const rows = A.length;
+            const cols = A[0].length;
+
+            // Deep copy
+            A = A.map(row => [...row]);
+
+            const pivotCols = [];
+            let currentRow = 0;
+
+            for (let col = 0; col < cols; col++) {
+                if (currentRow >= rows) break;
+
+                let maxRow = currentRow;
+                for (let row = currentRow + 1; row < rows; row++) {
+                    if (Math.abs(A[row][col]) > Math.abs(A[maxRow][col])) {
+                        maxRow = row;
+                    }
+                }
+
+                if (Math.abs(A[maxRow][col]) < tol) continue;
+
+                [A[currentRow], A[maxRow]] = [A[maxRow], A[currentRow]];
+                pivotCols.push(col);
+
+                // Normalize pivot row
+                const pivotVal = A[currentRow][col];
+                for (let c = 0; c < cols; c++) {
+                    A[currentRow][c] /= pivotVal;
+                }
+
+                // Eliminate above and below
+                for (let row = 0; row < rows; row++) {
+                    if (row !== currentRow && Math.abs(A[row][col]) > tol) {
+                        const factor = A[row][col];
+                        for (let c = 0; c < cols; c++) {
+                            A[row][c] -= factor * A[currentRow][c];
+                        }
+                    }
+                }
+
+                currentRow++;
+            }
+
+            // Find free columns
+            const freeCols = [];
+            for (let c = 0; c < cols; c++) {
+                if (!pivotCols.includes(c)) freeCols.push(c);
+            }
+
+            // Build null space basis
+            const nullBasis = [];
+            for (const freeCol of freeCols) {
+                const vec = new Array(cols).fill(0);
+                vec[freeCol] = 1;
+
+                for (let i = 0; i < pivotCols.length; i++) {
+                    vec[pivotCols[i]] = -A[i][freeCol];
+                }
+
+                nullBasis.push(vec);
+            }
+
+            return nullBasis;
+        }
+
+        function transpose(A) {
+            return A[0].map((_, colIndex) => A.map(row => row[colIndex]));
+        }
+
+        function getColumnSpaceBasis(matrix) {
+            const { pivotCols } = rowEchelonWithPivots(matrix);
+            const colBasis = pivotCols.map(col => matrix.map(row => row[col]));
+            const leftNullBasis = getNullSpace(transpose(matrix));
+            return { colBasis, leftNullBasis, rank: pivotCols.length };
+        }
+
+        function generateRankNMatrix(n) {
+            const randInt = () => Math.floor(Math.random() * 11) - 5;
+
+            if (n === 1) {
+                const col = [randInt(), randInt(), randInt()];
+                const row = [randInt(), randInt(), randInt()];
+                return [
+                    [col[0] * row[0], col[0] * row[1], col[0] * row[2]],
+                    [col[1] * row[0], col[1] * row[1], col[1] * row[2]],
+                    [col[2] * row[0], col[2] * row[1], col[2] * row[2]]
+                ];
+            } else {
+                const col1 = [randInt(), randInt(), randInt()];
+                const row1 = [randInt(), randInt(), randInt()];
+                const col2 = [randInt(), randInt(), randInt()];
+                const row2 = [randInt(), randInt(), randInt()];
+                return [
+                    [col1[0]*row1[0] + col2[0]*row2[0], col1[0]*row1[1] + col2[0]*row2[1], col1[0]*row1[2] + col2[0]*row2[2]],
+                    [col1[1]*row1[0] + col2[1]*row2[0], col1[1]*row1[1] + col2[1]*row2[1], col1[1]*row1[2] + col2[1]*row2[2]],
+                    [col1[2]*row1[0] + col2[2]*row2[0], col1[2]*row1[1] + col2[2]*row2[1], col1[2]*row1[2] + col2[2]*row2[2]]
+                ];
+            }
+        }
+
+        function formatVector(v) {
+            return `[${v.map(x => x.toFixed(2)).join(', ')}]`;
+        }
+
+        function visualize() {
+            // Clear previous visualization
+            while (vizGroup.children.length > 0) {
+                vizGroup.remove(vizGroup.children[0]);
+            }
+
+            const matrix = getMatrix();
+            const { colBasis, leftNullBasis, rank } = getColumnSpaceBasis(matrix);
+
+            // Update UI
+            document.getElementById('rank-display').textContent = rank;
+
+            const colSpaceDiv = document.getElementById('col-space-vectors');
+            colSpaceDiv.innerHTML = colBasis.map((v, i) =>
+                `<div class="vector-info">v${i + 1} = ${formatVector(v)}</div>`
+            ).join('');
+
+            const leftNullDiv = document.getElementById('left-null-vectors');
+            leftNullDiv.innerHTML = leftNullBasis.map((v, i) =>
+                `<div class="vector-info">u${i + 1} = ${formatVector(v)}</div>`
+            ).join('');
+
+            // Column space visualization (green)
+            const colColor = 0x00ff88;
+            colBasis.forEach(v => {
+                vizGroup.add(createArrow(v, colColor));
+            });
+
+            if (rank === 2) {
+                // Column space is a plane
+                vizGroup.add(createPlane(colBasis[0], colBasis[1], colColor, 0.2));
+            } else if (rank === 1) {
+                // Column space is a line
+                vizGroup.add(createLine(colBasis[0], colColor));
+            }
+
+            // Left null space visualization (red)
+            const nullColor = 0xff6b6b;
+            leftNullBasis.forEach(v => {
+                vizGroup.add(createArrow(v, nullColor));
+            });
+
+            if (leftNullBasis.length === 2) {
+                // Left null space is a plane
+                vizGroup.add(createPlane(leftNullBasis[0], leftNullBasis[1], nullColor, 0.2));
+            } else if (leftNullBasis.length === 1) {
+                // Left null space is a line
+                vizGroup.add(createLine(leftNullBasis[0], nullColor));
+            }
+        }
+
+        // Event listeners
+        document.getElementById('visualize-btn').addEventListener('click', visualize);
+
+        document.getElementById('random-rank1-btn').addEventListener('click', () => {
+            setMatrix(generateRankNMatrix(1));
+            visualize();
+        });
+
+        document.getElementById('random-rank2-btn').addEventListener('click', () => {
+            setMatrix(generateRankNMatrix(2));
+            visualize();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            labelRenderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        // Initial visualization
+        visualize();
+        animate();
+    </script>
+</body>
+</html>
