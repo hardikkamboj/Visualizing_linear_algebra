@@ -7,8 +7,7 @@ Interactive 3D visualizations of fundamental linear algebra concepts using Three
 | Visualization | Description | Status |
 |---------------|-------------|--------|
 | [Column Space & Left Null Space](./column-space/) | Explore the column space and left null space of 3x3 matrices | Available |
-| [Eigenvalues & Eigenvectors](./eigenvalues/) | Visualize eigenvalues and eigenvectors of matrices | Coming Soon |
-| [SVD](./svd/) | Singular Value Decomposition visualization | Coming Soon |
+| [Vector Projection](./projection/) | Project a vector onto a 2D plane and see the projection matrix | Available |
 
 ## Live Demo
 
