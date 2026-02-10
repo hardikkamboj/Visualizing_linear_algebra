@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gram-Schmidt Process Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            overflow: hidden;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #sidebar {
+            width: 380px;
+            background: #16213e;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid #0f3460;
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #e94560;
+        }
+
+        h2 {
+            font-size: 0.95rem;
+            margin: 12px 0 8px;
+            color: #0f9b8e;
+        }
+
+        .input-group {
+            margin-bottom: 10px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .vector-input {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+
+        .vector-input input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            background: #1a1a2e;
+            color: #eee;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .vector-input input:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 15px 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background: #e94560;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #ff6b6b;
+        }
+
+        button:disabled {
+            background: #444;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        button.secondary {
+            background: #0f9b8e;
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background: #12c4b3;
+        }
+
+        button.step-btn {
+            background: #6b5b95;
+        }
+
+        button.step-btn:hover:not(:disabled) {
+            background: #8b7bb5;
+        }
+
+        .info-section {
+            background: #1a1a2e;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 8px 0;
+        }
+
+        .vector-info {
+            font-family: monospace;
+            font-size: 0.8rem;
+            margin: 4px 0;
+        }
+
+        .step-indicator {
+            background: #0d1525;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .step-indicator .current-step {
+            color: #e94560;
+            font-weight: bold;
+        }
+
+        .input-color { color: #ffcc00; }
+        .orthogonal-color { color: #00ff88; }
+        .orthonormal-color { color: #ff6b6b; }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #info-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        #graph-legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            padding: 12px 15px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 10px;
+            color: #888;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            color: #e94560;
+        }
+
+        .formula {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 5px;
+            padding: 5px;
+            background: #0d1525;
+            border-radius: 3px;
+        }
+
+        .vector-label {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="sidebar">
+            <a href="../" class="back-link">← Back to Home</a>
+            <h1>Gram-Schmidt Process</h1>
+
+            <h2>Input Vectors (a, b, c)</h2>
+            <div class="input-group">
+                <label class="input-color">Vector a (x, y, z)</label>
+                <div class="vector-input">
+                    <input type="number" value="1" id="ax">
+                    <input type="number" value="0" id="ay">
+                    <input type="number" value="0" id="az">
+                </div>
+            </div>
+            <div class="input-group">
+                <label class="input-color">Vector b (x, y, z)</label>
+                <div class="vector-input">
+                    <input type="number" value="1" id="bx">
+                    <input type="number" value="1" id="by">
+                    <input type="number" value="0" id="bz">
+                </div>
+            </div>
+            <div class="input-group">
+                <label class="input-color">Vector c (x, y, z)</label>
+                <div class="vector-input">
+                    <input type="number" value="1" id="cx">
+                    <input type="number" value="1" id="cy">
+                    <input type="number" value="1" id="cz">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="random-btn" class="secondary">Random Independent Vectors</button>
+                <button id="reset-btn" class="secondary">Reset</button>
+            </div>
+
+            <div class="step-indicator" id="step-indicator">
+                <div class="current-step">Step 0: Input vectors a, b, c</div>
+                <div>Click "Next Step" or "Run All" to start</div>
+            </div>
+
+            <div class="button-group">
+                <button id="next-step-btn" class="step-btn">Next Step</button>
+                <button id="run-all-btn">Run All Steps</button>
+            </div>
+
+            <div class="info-section">
+                <h2 class="orthogonal-color">Orthogonal Vectors (A, B, C)</h2>
+                <div id="orthogonal-A" class="vector-info">A = -</div>
+                <div class="formula">A = a</div>
+                <div id="orthogonal-B" class="vector-info">B = -</div>
+                <div class="formula">B = b - (Aᵀb/AᵀA)A</div>
+                <div id="orthogonal-C" class="vector-info">C = -</div>
+                <div class="formula">C = c - (Aᵀc/AᵀA)A - (Bᵀc/BᵀB)B</div>
+            </div>
+
+            <div class="info-section">
+                <h2 class="orthonormal-color">Orthonormal Vectors (q₁, q₂, q₃)</h2>
+                <div id="orthonormal-q1" class="vector-info">q₁ = -</div>
+                <div class="formula">q₁ = A / |A|</div>
+                <div id="orthonormal-q2" class="vector-info">q₂ = -</div>
+                <div class="formula">q₂ = B / |B|</div>
+                <div id="orthonormal-q3" class="vector-info">q₃ = -</div>
+                <div class="formula">q₃ = C / |C|</div>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+            <div id="info-overlay">
+                Drag to rotate | Scroll to zoom | Right-drag to pan
+            </div>
+            <div id="graph-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ffcc00;"></div>
+                    <span>Input vectors (a, b, c)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #00ff88;"></div>
+                    <span>Orthogonal (A, B, C)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff6b6b;"></div>
+                    <span>Orthonormal (q₁, q₂, q₃)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            container.clientWidth / container.clientHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(4, 4, 4);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // Orbit controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.zoomSpeed = 3;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 5);
+        scene.add(directionalLight);
+
+        // CSS2D Renderer for labels
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(container.clientWidth, container.clientHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        container.appendChild(labelRenderer.domElement);
+
+        // Grid and axes
+        const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x333333);
+        scene.add(gridHelper);
+
+        // Create axis
+        function createAxis(start, end, label) {
+            const points = [
+                new THREE.Vector3(start.x, start.y, start.z),
+                new THREE.Vector3(end.x, end.y, end.z)
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 3 });
+            const line = new THREE.Line(geometry, material);
+
+            const labelDiv = document.createElement('div');
+            labelDiv.textContent = label;
+            labelDiv.style.color = '#ffffff';
+            labelDiv.style.fontSize = '14px';
+            labelDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            labelDiv.style.fontWeight = '600';
+            labelDiv.style.padding = '2px 6px';
+            labelDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+            labelDiv.style.borderRadius = '3px';
+            const labelObject = new CSS2DObject(labelDiv);
+            labelObject.position.set(end.x * 1.1, end.y * 1.1, end.z * 1.1);
+            line.add(labelObject);
+
+            return line;
+        }
+
+        const axisLength = 5;
+        scene.add(createAxis({x: -axisLength, y: 0, z: 0}, {x: axisLength, y: 0, z: 0}, 'X'));
+        scene.add(createAxis({x: 0, y: -axisLength, z: 0}, {x: 0, y: axisLength, z: 0}, 'Y'));
+        scene.add(createAxis({x: 0, y: 0, z: -axisLength}, {x: 0, y: 0, z: axisLength}, 'Z'));
+
+        // Group for visualization objects
+        let vizGroup = new THREE.Group();
+        scene.add(vizGroup);
+
+        // State
+        let currentStep = 0;
+        let a, b, c; // Input vectors
+        let A, B, C; // Orthogonal vectors
+        let q1, q2, q3; // Orthonormal vectors
+
+        // Vector operations
+        function getInputVector(prefix) {
+            return [
+                parseFloat(document.getElementById(prefix + 'x').value) || 0,
+                parseFloat(document.getElementById(prefix + 'y').value) || 0,
+                parseFloat(document.getElementById(prefix + 'z').value) || 0
+            ];
+        }
+
+        function setInputVector(prefix, vec) {
+            document.getElementById(prefix + 'x').value = vec[0].toFixed(2);
+            document.getElementById(prefix + 'y').value = vec[1].toFixed(2);
+            document.getElementById(prefix + 'z').value = vec[2].toFixed(2);
+        }
+
+        function dot(u, v) {
+            return u[0]*v[0] + u[1]*v[1] + u[2]*v[2];
+        }
+
+        function vecLength(v) {
+            return Math.sqrt(dot(v, v));
+        }
+
+        function normalize(v) {
+            const len = vecLength(v);
+            if (len < 0.0001) return [0, 0, 0];
+            return [v[0]/len, v[1]/len, v[2]/len];
+        }
+
+        function scale(v, s) {
+            return [v[0]*s, v[1]*s, v[2]*s];
+        }
+
+        function subtract(u, v) {
+            return [u[0]-v[0], u[1]-v[1], u[2]-v[2]];
+        }
+
+        function project(u, v) {
+            // Project u onto v: (v·u / v·v) * v
+            const denom = dot(v, v);
+            if (denom < 0.0001) return [0, 0, 0];
+            const coeff = dot(v, u) / denom;
+            return scale(v, coeff);
+        }
+
+        function formatVector(v) {
+            if (!v) return '-';
+            return `[${v.map(x => x.toFixed(3)).join(', ')}]`;
+        }
+
+        // Create a labeled vector (arrow + text label at tip)
+        function createLabeledArrow(vec, color, labelText, opacity = 1) {
+            const group = new THREE.Group();
+
+            const len = vecLength(vec);
+            if (len < 0.001) return null;
+
+            // Create arrow
+            const dir = new THREE.Vector3(vec[0], vec[1], vec[2]).normalize();
+            const origin = new THREE.Vector3(0, 0, 0);
+            const arrow = new THREE.ArrowHelper(dir, origin, len, color, 0.15, 0.08);
+
+            // Set opacity on arrow materials
+            arrow.line.material.transparent = true;
+            arrow.line.material.opacity = opacity;
+            arrow.cone.material.transparent = true;
+            arrow.cone.material.opacity = opacity;
+
+            group.add(arrow);
+
+            // Create label at the tip of the arrow
+            const labelDiv = document.createElement('div');
+            labelDiv.textContent = labelText;
+            labelDiv.style.color = '#' + color.toString(16).padStart(6, '0');
+            labelDiv.style.fontSize = '14px';
+            labelDiv.style.fontWeight = 'bold';
+            labelDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            labelDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            labelDiv.style.padding = '2px 5px';
+            labelDiv.style.borderRadius = '3px';
+            labelDiv.style.opacity = opacity.toString();
+
+            const label = new CSS2DObject(labelDiv);
+            // Position label slightly beyond the arrow tip
+            label.position.set(vec[0] * 1.1, vec[1] * 1.1, vec[2] * 1.1);
+            group.add(label);
+
+            return group;
+        }
+
+        // Update step indicator
+        function updateStepIndicator() {
+            const indicator = document.getElementById('step-indicator');
+            const steps = [
+                { title: 'Step 0: Input vectors', desc: 'Starting with independent vectors a, b, c' },
+                { title: 'Step 1: A = a', desc: 'First orthogonal vector is just a' },
+                { title: 'Step 2: B = b - proj_A(b)', desc: 'Remove component of b along A' },
+                { title: 'Step 3: C = c - proj_A(c) - proj_B(c)', desc: 'Remove components along A and B' },
+                { title: 'Step 4: q₁ = A/|A|', desc: 'Normalize A to get first orthonormal vector' },
+                { title: 'Step 5: q₂ = B/|B|', desc: 'Normalize B to get second orthonormal vector' },
+                { title: 'Step 6: q₃ = C/|C|', desc: 'Normalize C — Complete!' }
+            ];
+
+            const step = steps[Math.min(currentStep, steps.length - 1)];
+            indicator.innerHTML = `
+                <div class="current-step">${step.title}</div>
+                <div>${step.desc}</div>
+            `;
+        }
+
+        // Visualization
+        function visualize() {
+            // Clear previous
+            while (vizGroup.children.length > 0) {
+                const child = vizGroup.children[0];
+                vizGroup.remove(child);
+            }
+
+            // Determine what to show based on current step
+            const showInput = true;
+            const showOrthogonal = currentStep >= 1;
+            const showOrthonormal = currentStep >= 4;
+
+            // Opacity for input vectors (dim when orthogonal shown)
+            const inputOpacity = showOrthogonal ? 0.25 : 1;
+
+            // Opacity for orthogonal vectors (dim when orthonormal shown)
+            const orthogonalOpacity = showOrthonormal ? 0.25 : 1;
+
+            // Show input vectors a, b, c
+            if (showInput) {
+                const arrowA = createLabeledArrow(a, 0xffcc00, 'a', inputOpacity);
+                const arrowB = createLabeledArrow(b, 0xffcc00, 'b', inputOpacity);
+                const arrowC = createLabeledArrow(c, 0xffcc00, 'c', inputOpacity);
+                if (arrowA) vizGroup.add(arrowA);
+                if (arrowB) vizGroup.add(arrowB);
+                if (arrowC) vizGroup.add(arrowC);
+            }
+
+            // Show orthogonal vectors A, B, C based on step
+            if (currentStep >= 1 && A) {
+                const opacity = currentStep >= 4 ? 0.25 : 1;
+                const arrowA = createLabeledArrow(A, 0x00ff88, 'A', opacity);
+                if (arrowA) vizGroup.add(arrowA);
+                document.getElementById('orthogonal-A').textContent = `A = ${formatVector(A)}`;
+            }
+
+            if (currentStep >= 2 && B) {
+                const opacity = currentStep >= 5 ? 0.25 : 1;
+                const arrowB = createLabeledArrow(B, 0x00ff88, 'B', opacity);
+                if (arrowB) vizGroup.add(arrowB);
+                document.getElementById('orthogonal-B').textContent = `B = ${formatVector(B)}`;
+            }
+
+            if (currentStep >= 3 && C) {
+                const opacity = currentStep >= 6 ? 0.25 : 1;
+                const arrowC = createLabeledArrow(C, 0x00ff88, 'C', opacity);
+                if (arrowC) vizGroup.add(arrowC);
+                document.getElementById('orthogonal-C').textContent = `C = ${formatVector(C)}`;
+            }
+
+            // Show orthonormal vectors q1, q2, q3
+            if (currentStep >= 4 && q1) {
+                const arrowQ1 = createLabeledArrow(q1, 0xff6b6b, 'q₁', 1);
+                if (arrowQ1) vizGroup.add(arrowQ1);
+                document.getElementById('orthonormal-q1').textContent = `q₁ = ${formatVector(q1)}`;
+            }
+
+            if (currentStep >= 5 && q2) {
+                const arrowQ2 = createLabeledArrow(q2, 0xff6b6b, 'q₂', 1);
+                if (arrowQ2) vizGroup.add(arrowQ2);
+                document.getElementById('orthonormal-q2').textContent = `q₂ = ${formatVector(q2)}`;
+            }
+
+            if (currentStep >= 6 && q3) {
+                const arrowQ3 = createLabeledArrow(q3, 0xff6b6b, 'q₃', 1);
+                if (arrowQ3) vizGroup.add(arrowQ3);
+                document.getElementById('orthonormal-q3').textContent = `q₃ = ${formatVector(q3)}`;
+            }
+
+            updateStepIndicator();
+
+            // Update button states
+            document.getElementById('next-step-btn').disabled = currentStep >= 6;
+            document.getElementById('run-all-btn').disabled = currentStep >= 6;
+        }
+
+        function computeGramSchmidt() {
+            // Read input
+            a = getInputVector('a');
+            b = getInputVector('b');
+            c = getInputVector('c');
+
+            // Compute orthogonal vectors
+            A = [...a]; // Copy a
+            B = subtract(b, project(b, A));
+            C = subtract(subtract(c, project(c, A)), project(c, B));
+
+            // Compute orthonormal vectors
+            q1 = normalize(A);
+            q2 = normalize(B);
+            q3 = normalize(C);
+        }
+
+        function reset() {
+            currentStep = 0;
+
+            // Read current input values
+            a = getInputVector('a');
+            b = getInputVector('b');
+            c = getInputVector('c');
+
+            A = B = C = q1 = q2 = q3 = null;
+
+            // Reset display
+            document.getElementById('orthogonal-A').textContent = 'A = -';
+            document.getElementById('orthogonal-B').textContent = 'B = -';
+            document.getElementById('orthogonal-C').textContent = 'C = -';
+            document.getElementById('orthonormal-q1').textContent = 'q₁ = -';
+            document.getElementById('orthonormal-q2').textContent = 'q₂ = -';
+            document.getElementById('orthonormal-q3').textContent = 'q₃ = -';
+
+            visualize();
+        }
+
+        function nextStep() {
+            if (currentStep >= 6) return;
+
+            if (currentStep === 0) {
+                computeGramSchmidt();
+            }
+
+            currentStep++;
+            visualize();
+        }
+
+        function runAll() {
+            computeGramSchmidt();
+            currentStep = 6;
+            visualize();
+        }
+
+        function randomIndependentVectors() {
+            const randVec = () => [
+                Math.round((Math.random() * 4 - 2) * 10) / 10,
+                Math.round((Math.random() * 4 - 2) * 10) / 10,
+                Math.round((Math.random() * 4 - 2) * 10) / 10
+            ];
+
+            let va, vb, vc, det;
+
+            // Keep generating until we get linearly independent vectors
+            do {
+                va = randVec();
+                vb = randVec();
+                vc = randVec();
+
+                // Check determinant (non-zero means independent)
+                det = va[0]*(vb[1]*vc[2] - vb[2]*vc[1])
+                    - va[1]*(vb[0]*vc[2] - vb[2]*vc[0])
+                    + va[2]*(vb[0]*vc[1] - vb[1]*vc[0]);
+            } while (Math.abs(det) < 0.5);
+
+            setInputVector('a', va);
+            setInputVector('b', vb);
+            setInputVector('c', vc);
+            reset();
+        }
+
+        // Event listeners
+        document.getElementById('next-step-btn').addEventListener('click', nextStep);
+        document.getElementById('run-all-btn').addEventListener('click', runAll);
+        document.getElementById('reset-btn').addEventListener('click', reset);
+        document.getElementById('random-btn').addEventListener('click', randomIndependentVectors);
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            labelRenderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        // Initialize
+        reset();
+        animate();
+    </script>
+</body>
+</html>

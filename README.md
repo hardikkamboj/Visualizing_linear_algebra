@@ -8,6 +8,7 @@ Interactive 3D visualizations of fundamental linear algebra concepts using Three
 |---------------|-------------|--------|
 | [Column Space & Left Null Space](./column-space/) | Explore the column space and left null space of 3x3 matrices | Available |
 | [Vector Projection](./projection/) | Project a vector onto a 2D plane and see the projection matrix | Available |
+| [Gram-Schmidt Process](./gram-schmidt/) | Step-by-step orthogonalization: a,b,c → A,B,C → q₁,q₂,q₃ | Available |
 
 ## Live Demo
 
